@@ -18,7 +18,7 @@ $itemScalingConfigReader->fetchColumnNames();
 echo "Opening Item Offset Curve reader...\n";
 $itemOffsetCurveReader = getReader('ItemOffsetCurve');
 $colNames = $itemOffsetCurveReader->fetchColumnNames();
-$bonusReader->setFieldsSigned([
+$itemOffsetCurveReader->setFieldsSigned([
     array_search('Offset', $colNames) => true,
 ]);
 

@@ -50,6 +50,7 @@ $bonusNames = [];
 $nameToBonus = [];
 $excludeNameBonus = [];
 $statBonuses = [];
+$bonusToSockets = [];
 
 $levelData = [
     'legacyAdjust'           => [], //  1
@@ -135,6 +136,13 @@ foreach ($bonusScan() as $rec) {
             $seenNames[$nameId] = true;
             $bonusNames[$bonusId] = [$priority, $nameId];
             $nameToBonus[$nameId][] = $bonusId;
+            break;
+
+        case 6: // Add Socket
+            [$socketCount, $socketType] = $rec['Value'];
+            for ($x = 0; $x < $socketCount && $x < 4; $x++) {
+                $bonusToSockets[$bonusId][] = $socketType;
+            }
             break;
 
         case 13: // Player level curve
@@ -261,3 +269,4 @@ foreach ($statBonuses as $statId => $bonuses) {
     }
 }
 file_put_contents("{$outPath}/bonusToStats.json", json_encode($bonusToStats, OE_JSON_FLAGS));
+file_put_contents("{$outPath}/bonusToSockets.json", json_encode($bonusToSockets, OE_JSON_FLAGS));

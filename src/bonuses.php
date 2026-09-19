@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/incl.php';
 
-$outPath = __DIR__ . '/../out';
+$outPath = getOutPath();
 
 echo "Opening Bonus reader...\n";
 $bonusReader = getReader('ItemBonus');
@@ -17,10 +17,13 @@ $itemScalingConfigReader->fetchColumnNames();
 
 echo "Opening Item Offset Curve reader...\n";
 $itemOffsetCurveReader = getReader('ItemOffsetCurve');
-$colNames = $itemOffsetCurveReader->fetchColumnNames();
-$itemOffsetCurveReader->setFieldsSigned([
-    array_search('Offset', $colNames) => true,
-]);
+// Forever has a blank file with fewer columns than its layout hash indicates.
+if ($itemOffsetCurveReader->getIds()) {
+    $colNames = $itemOffsetCurveReader->fetchColumnNames();
+    $itemOffsetCurveReader->setFieldsSigned([
+        array_search('Offset', $colNames) => true,
+    ]);
+}
 
 echo "Opening Content Tuning reader...\n";
 $contentTuningReader = getReader('ContentTuning');

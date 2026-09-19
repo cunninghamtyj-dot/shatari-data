@@ -2,5 +2,6 @@
 
 cd "$( dirname "${BASH_SOURCE[0]}" )"
 
-cp -v out/battlepets.json out/bonuses.json out/items.all.json out/names.bound.*.json ../shatari/
-cp -v out/craftingQualities.json out/battlepets.json out/battlepets.*.json out/categories.*.json out/items.unbound.json out/names.unbound.*.json out/name-suffixes.*.json out/vendor.json out/bonusToStats.json out/bonusToSockets.json ../shatari-front/json/
+cd out/mainline
+cp -v battlepets.json bonuses.json items.all.json names.bound.*.json ../../../shatari/
+cp -v craftingQualities.json battlepets.json battlepets.*.json categories.*.json items.unbound.json names.unbound.*.json name-suffixes.*.json vendor.json bonusToStats.json bonusToSockets.json ../../../shatari-front/json/

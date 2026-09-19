@@ -2,10 +2,27 @@
 
 require_once __DIR__ . '/incl.php';
 
-$outPath = __DIR__ . '/../out';
+$outPath = getOutPath();
 $locale = $argv[1] ?? 'enus';
 
 define('HIDE_SUBCLASS_AUCTION', 0x2);
+
+define('SUBCLASS_CONSUMABLE_GENERIC', 0); // "Explosives"
+define('SUBCLASS_CONSUMABLE_POTION', 1);
+define('SUBCLASS_CONSUMABLE_ELIXIR', 2);
+define('SUBCLASS_CONSUMABLE_FLASKSPHIALS', 3);
+define('SUBCLASS_CONSUMABLE_SCROLL', 4);
+define('SUBCLASS_CONSUMABLE_FOODDRINK', 5);
+define('SUBCLASS_CONSUMABLE_ITEMENHANCEMENT', 6);
+define('SUBCLASS_CONSUMABLE_BANDAGE', 7);
+define('SUBCLASS_CONSUMABLE_OTHER', 8);
+define('SUBCLASS_CONSUMABLE_VANTUSRUNE', 9);
+define('SUBCLASS_CONSUMABLE_UTILITYCURIO', 10);
+define('SUBCLASS_CONSUMABLE_COMBATCURIO', 11);
+define('SUBCLASS_CONSUMABLE_RELIC', 12);
+define('SUBCLASS_CONSUMABLE_DRAUGHT', 13);
+define('SUBCLASS_CONSUMABLE_DEVICE', 14);
+define('SUBCLASS_CONSUMABLE_ITEMENHANCEMENT_TEMPORARY', 15);
 
 define('SUBCLASS_WEAPON_AXE1H', 0);
 define('SUBCLASS_WEAPON_AXE2H', 1);
@@ -25,6 +42,24 @@ define('SUBCLASS_WEAPON_THROWN', 16);
 define('SUBCLASS_WEAPON_CROSSBOW', 18);
 define('SUBCLASS_WEAPON_WAND', 19);
 define('SUBCLASS_WEAPON_FISHINGPOLE', 20);
+
+define('SUBCLASS_CONTAINER_BAG', 0);
+define('SUBCLASS_CONTAINER_SOUL', 1);
+define('SUBCLASS_CONTAINER_HERB', 2);
+define('SUBCLASS_CONTAINER_ENCHANTING', 3);
+define('SUBCLASS_CONTAINER_ENGINEERING', 4);
+define('SUBCLASS_CONTAINER_GEM', 5);
+define('SUBCLASS_CONTAINER_MINING', 6);
+define('SUBCLASS_CONTAINER_LEATHERWORKING', 7);
+define('SUBCLASS_CONTAINER_INSCRIPTION', 8);
+define('SUBCLASS_CONTAINER_TACKLEBOX', 9);
+define('SUBCLASS_CONTAINER_COOKING', 10);
+define('SUBCLASS_CONTAINER_REAGENT', 11);
+
+define('SUBCLASS_QUIVER_OBSOLETE_QUIVER', 0);
+define('SUBCLASS_QUIVER_OBSOLETE_BOLTS', 1);
+define('SUBCLASS_QUIVER_QUIVER', 2);
+define('SUBCLASS_QUIVER_AMMOPOUCH', 3);
 
 define('SUBCLASS_RECIPE_BOOK', 0);
 define('SUBCLASS_MISCELLANEOUS_JUNK', 0);
@@ -68,14 +103,15 @@ define('INV_TYPE_NAMES', [
     INV_TYPE_TRINKET => 'INVTYPE_TRINKET',
     INV_TYPE_SHIELD => 'INVTYPE_SHIELD',
     INV_TYPE_HOLDABLE => 'INVTYPE_HOLDABLE',
+    INV_TYPE_RELIC => 'INVTYPE_RELIC',
 ]);
 
-define('TERTIARY_STAT_NAMES', [
+$tertiaryStatNames = isForever() ? [] : [
     STAT_SPEED_RATING => 'STAT_SPEED',
     STAT_LEECH_RATING => 'STAT_LIFESTEAL',
     STAT_AVOIDANCE_RATING => 'STAT_AVOIDANCE',
     STAT_INDESTRUCTIBLE_RATING => 'STAT_STURDINESS',
-]);
+];
 
 $result = [];
 
@@ -111,6 +147,22 @@ $getSubclassCategories = function (int $classId) use ($subClassReader): array {
             SUBCLASS_PROFESSION_FISHING        => 12,
         ],
     ];
+    if (isForever()) {
+        $sortOrderOverride[CLASS_CONSUMABLE] = array_flip([
+            SUBCLASS_CONSUMABLE_GENERIC,
+            SUBCLASS_CONSUMABLE_POTION,
+            SUBCLASS_CONSUMABLE_ELIXIR,
+            SUBCLASS_CONSUMABLE_FLASKSPHIALS,
+            SUBCLASS_CONSUMABLE_SCROLL,
+            SUBCLASS_CONSUMABLE_FOODDRINK,
+            SUBCLASS_CONSUMABLE_BANDAGE,
+            SUBCLASS_CONSUMABLE_ITEMENHANCEMENT,
+            SUBCLASS_CONSUMABLE_ITEMENHANCEMENT_TEMPORARY,
+            SUBCLASS_CONSUMABLE_DRAUGHT,
+            SUBCLASS_CONSUMABLE_DEVICE,
+            SUBCLASS_CONSUMABLE_OTHER,
+        ]);
+    }
 
     $result = [];
     foreach ($subClassReader->generateRecords() as $rec) {
@@ -164,7 +216,14 @@ $weaponsCategory = [
         [
             'name' => $globalStrings['AUCTION_SUBCATEGORY_ONE_HANDED'],
             'class' => CLASS_WEAPON,
-            'subClasses' => [
+            'subClasses' => isForever() ? [
+                SUBCLASS_WEAPON_AXE1H,
+                SUBCLASS_WEAPON_MACE1H,
+                SUBCLASS_WEAPON_SWORD1H,
+                SUBCLASS_WEAPON_DAGGER,
+                SUBCLASS_WEAPON_UNARMED,
+                SUBCLASS_WEAPON_WAND,
+            ] : [
                 SUBCLASS_WEAPON_AXE1H,
                 SUBCLASS_WEAPON_MACE1H,
                 SUBCLASS_WEAPON_SWORD1H,
@@ -217,7 +276,7 @@ foreach ($weaponsCategory['subcategories'] as &$subcat) {
     }
 
     if (!in_array(SUBCLASS_WEAPON_GENERIC, $subcat['subClasses'], strict: true)) {
-        foreach (TERTIARY_STAT_NAMES as $statId => $statName) {
+        foreach ($tertiaryStatNames as $statId => $statName) {
             $subcat['subcategories'][] = [
                 'name'       => $globalStrings[$statName],
                 'class'      => CLASS_WEAPON,
@@ -250,6 +309,9 @@ $inventoryTypes = [
     [INV_TYPE_WRISTS],
     [INV_TYPE_HANDS],
 ];
+if (isForever()) {
+    $inventoryTypes[] = [INV_TYPE_RELIC];
+}
 $armorSubclasses = [
     SUBCLASS_ARMOR_PLATE,
     SUBCLASS_ARMOR_MAIL,
@@ -267,16 +329,18 @@ $makeInvTypeSubCategory = function (int $subclass, array $invTypes) use ($global
 
 foreach ($armorSubclasses as $armorSubclass) {
     $subcat = $makeSubclassCategory(CLASS_ARMOR, $armorSubclass);
-    $subcat['subcategories'][] = [
-        'name' => $globalStrings['AUCTION_HOUSE_FILTER_RUNECARVING'],
-        'class' => CLASS_ARMOR,
-        'subClass' => $armorSubclass,
-        'extraFilters' => [11],
-    ];
+    if (!isForever()) {
+        $subcat['subcategories'][] = [
+            'name'         => $globalStrings['AUCTION_HOUSE_FILTER_RUNECARVING'],
+            'class'        => CLASS_ARMOR,
+            'subClass'     => $armorSubclass,
+            'extraFilters' => [11],
+        ];
+    }
     foreach ($inventoryTypes as $inventoryTypeSet) {
         $subcat['subcategories'][] = $makeInvTypeSubCategory($armorSubclass, $inventoryTypeSet);
     }
-    foreach (TERTIARY_STAT_NAMES as $statId => $statName) {
+    foreach ($tertiaryStatNames as $statId => $statName) {
         $subcat['subcategories'][] = [
             'name' => $globalStrings[$statName],
             'class' => CLASS_ARMOR,
@@ -286,13 +350,31 @@ foreach ($armorSubclasses as $armorSubclass) {
     }
     $armorCategory['subcategories'][] = $subcat;
 }
+if (isForever()) {
+    $subcat = [
+        'name' => $globalStrings['AUCTION_SUBCATEGORY_RELIC'],
+        'class' => CLASS_ARMOR,
+        'subClasses' => [
+            SUBCLASS_ARMOR_IDOL,
+            SUBCLASS_ARMOR_LIBRAM,
+            SUBCLASS_ARMOR_TOTEM,
+        ],
+    ];
+    foreach ($subcat['subClasses'] as $subClass) {
+        $subcat['subcategories'][] = $makeSubclassCategory($subcat['class'], $subClass);
+    }
+    $armorCategory['subcategories'][] = $subcat;
+}
+
 $subcat = $makeSubclassCategory(CLASS_ARMOR, SUBCLASS_ARMOR_GENERIC);
-$subcat['subcategories'][] = [
-    'name' => $globalStrings['AUCTION_HOUSE_FILTER_RUNECARVING'],
-    'class' => CLASS_ARMOR,
-    'subClass' => SUBCLASS_ARMOR_GENERIC,
-    'extraFilters' => [11],
-];
+if (!isForever()) {
+    $subcat['subcategories'][] = [
+        'name'         => $globalStrings['AUCTION_HOUSE_FILTER_RUNECARVING'],
+        'class'        => CLASS_ARMOR,
+        'subClass'     => SUBCLASS_ARMOR_GENERIC,
+        'extraFilters' => [11],
+    ];
+}
 $subcat['subcategories'][] = $makeInvTypeSubCategory(SUBCLASS_ARMOR_GENERIC, [INV_TYPE_NECK]);
 $subcat['subcategories'][] = [
     'name' => $globalStrings['AUCTION_SUBCATEGORY_CLOAK'],
@@ -305,8 +387,10 @@ $subcat['subcategories'][] = $makeInvTypeSubCategory(SUBCLASS_ARMOR_GENERIC, [IN
 $subcat['subcategories'][] = $makeInvTypeSubCategory(SUBCLASS_ARMOR_GENERIC, [INV_TYPE_HOLDABLE]);
 $subcat['subcategories'][] = $makeSubclassCategory(CLASS_ARMOR, SUBCLASS_ARMOR_SHIELD);
 $subcat['subcategories'][] = $makeInvTypeSubCategory(SUBCLASS_ARMOR_GENERIC, [INV_TYPE_BODY]);
-$subcat['subcategories'][] = $makeInvTypeSubCategory(SUBCLASS_ARMOR_GENERIC, [INV_TYPE_HEAD]);
-foreach (TERTIARY_STAT_NAMES as $statId => $statName) {
+if (!isForever()) {
+    $subcat['subcategories'][] = $makeInvTypeSubCategory(SUBCLASS_ARMOR_GENERIC, [INV_TYPE_HEAD]);
+}
+foreach ($tertiaryStatNames as $statId => $statName) {
     $subcat['subcategories'][] = [
         'name' => $globalStrings[$statName],
         'class' => CLASS_ARMOR,
@@ -314,45 +398,83 @@ foreach (TERTIARY_STAT_NAMES as $statId => $statName) {
         'bonusStat' => $statId,
     ];
 }
-
 $armorCategory['subcategories'][] = $subcat;
 
-$armorCategory['subcategories'][] = $makeSubclassCategory(CLASS_ARMOR, SUBCLASS_ARMOR_COSMETIC);
+if (!isForever()) {
+    $armorCategory['subcategories'][] = $makeSubclassCategory(CLASS_ARMOR, SUBCLASS_ARMOR_COSMETIC);
+}
 
 $result[] = $armorCategory;
 
 // Containers
-$result[] = [
+$containersCategory = [
     'name' => $globalStrings['AUCTION_CATEGORY_CONTAINERS'],
     'detailColumn' => [
         'prop' => 'slots',
         'name' => $globalStrings['AUCTION_HOUSE_BROWSE_HEADER_CONTAINER_SLOTS'],
     ],
     'class' => CLASS_CONTAINER,
-    'subcategories' => $getSubclassCategories(CLASS_CONTAINER),
 ];
+if (isForever()) {
+    $containersCategory['subcategories'][] = [
+        'name' => $globalStrings['AUCTION_SUBCATEGORY_STANDARD_CONTAINER'],
+        'class' => CLASS_CONTAINER,
+        'subClasses' => [SUBCLASS_CONTAINER_BAG, SUBCLASS_CONTAINER_SOUL],
+    ];
+    $containersCategory['subcategories'][] = [
+        'name' => $globalStrings['AUCTION_SUBCATEGORY_AMMO_CONTAINER'],
+        'class' => CLASS_QUIVER,
+        'subClasses' => [SUBCLASS_QUIVER_QUIVER, SUBCLASS_QUIVER_AMMOPOUCH],
+    ];
+    $containersCategory['subcategories'][] = [
+        'name' => $globalStrings['AUCTION_SUBCATEGORY_REAGENT_CONTAINER'],
+        'class' => CLASS_CONTAINER,
+        'subClasses' => [
+            SUBCLASS_CONTAINER_HERB,
+            SUBCLASS_CONTAINER_ENCHANTING,
+            SUBCLASS_CONTAINER_ENGINEERING,
+            SUBCLASS_CONTAINER_MINING,
+            SUBCLASS_CONTAINER_LEATHERWORKING,
+            SUBCLASS_CONTAINER_TACKLEBOX,
+            SUBCLASS_CONTAINER_COOKING,
+            SUBCLASS_CONTAINER_REAGENT,
+        ],
+    ];
+    foreach ($containersCategory['subcategories'] as &$subcat) {
+        foreach ($subcat['subClasses'] as $subClass) {
+            $subcat['subcategories'][] = $makeSubclassCategory($subcat['class'], $subClass);
+        }
+    }
+    unset($subcat);
 
-// Gems
-$result[] = [
-    'name' => $globalStrings['AUCTION_CATEGORY_GEMS'],
-    'detailColumn' => [
-        'prop' => 'itemLevel',
-        'name' => $globalStrings['ITEM_LEVEL_ABBR'],
-    ],
-    'class' => CLASS_GEM,
-    'subcategories' => $getSubclassCategories(CLASS_GEM),
-];
+} else {
+    $containersCategory['subcategories'] = $getSubclassCategories(CLASS_CONTAINER);
+}
+$result[] = $containersCategory;
 
-// Item Enhancement
-$result[] = [
-    'name' => $globalStrings['AUCTION_CATEGORY_ITEM_ENHANCEMENT'],
-    'detailColumn' => [
-        'prop' => 'itemLevel',
-        'name' => $globalStrings['ITEM_LEVEL_ABBR'],
-    ],
-    'class' => CLASS_ITEM_ENHANCEMENT,
-    'subcategories' => $getSubclassCategories(CLASS_ITEM_ENHANCEMENT),
-];
+if (!isForever()) {
+    // Gems
+    $result[] = [
+        'name'          => $globalStrings['AUCTION_CATEGORY_GEMS'],
+        'detailColumn'  => [
+            'prop' => 'itemLevel',
+            'name' => $globalStrings['ITEM_LEVEL_ABBR'],
+        ],
+        'class'         => CLASS_GEM,
+        'subcategories' => $getSubclassCategories(CLASS_GEM),
+    ];
+
+    // Item Enhancement
+    $result[] = [
+        'name'          => $globalStrings['AUCTION_CATEGORY_ITEM_ENHANCEMENT'],
+        'detailColumn'  => [
+            'prop' => 'itemLevel',
+            'name' => $globalStrings['ITEM_LEVEL_ABBR'],
+        ],
+        'class'         => CLASS_ITEM_ENHANCEMENT,
+        'subcategories' => $getSubclassCategories(CLASS_ITEM_ENHANCEMENT),
+    ];
+}
 
 // Consumables
 $result[] = [
@@ -365,12 +487,14 @@ $result[] = [
     'subcategories' => $getSubclassCategories(CLASS_CONSUMABLE),
 ];
 
-// Glyphs
-$result[] = [
-    'name' => $globalStrings['AUCTION_CATEGORY_GLYPHS'],
-    'class' => CLASS_GLYPH,
-    'subcategories' => $getSubclassCategories(CLASS_GLYPH),
-];
+if (!isForever()) {
+    // Glyphs
+    $result[] = [
+        'name'          => $globalStrings['AUCTION_CATEGORY_GLYPHS'],
+        'class'         => CLASS_GLYPH,
+        'subcategories' => $getSubclassCategories(CLASS_GLYPH),
+    ];
+}
 
 // Trade Goods
 $result[] = [
@@ -378,6 +502,15 @@ $result[] = [
     'class' => CLASS_TRADEGOODS,
     'subcategories' => $getSubclassCategories(CLASS_TRADEGOODS),
 ];
+
+// Projectile
+if (isForever()) {
+    $result[] = [
+        'name' => $globalStrings['AUCTION_CATEGORY_PROJECTILE'],
+        'class' => CLASS_PROJECTILE,
+        'subcategories' => $getSubclassCategories(CLASS_PROJECTILE),
+    ];
+}
 
 // Recipes
 $result[] = [
@@ -390,64 +523,66 @@ $result[] = [
     'subcategories' => $getSubclassCategories(CLASS_RECIPE),
 ];
 
-// Profession Equipment
-$profEquipCategory = [
-    'name' => $globalStrings['AUCTION_CATEGORY_PROFESSION_EQUIPMENT'],
-    'detailColumn' => [
-        'prop' => 'itemLevel',
-        'name' => $globalStrings['ITEM_LEVEL_ABBR'],
-    ],
-    'class' => CLASS_PROFESSION,
-    'subcategories' => $getSubclassCategories(CLASS_PROFESSION),
-];
-$profEquipCategory['subcategories'] = array_values(array_filter($profEquipCategory['subcategories'], function ($subCat) {
-    return $subCat['subClass'] !== SUBCLASS_PROFESSION_ARCHAEOLOGY;
-}));
-foreach ($profEquipCategory['subcategories'] as &$subcategory) {
-    $subcategory['subcategories'][] = [
-        'name' => $globalStrings['AUCTION_SUBCATEGORY_PROFESSION_TOOLS'],
+if (!isForever()) {
+    // Profession Equipment
+    $profEquipCategory = [
+        'name' => $globalStrings['AUCTION_CATEGORY_PROFESSION_EQUIPMENT'],
+        'detailColumn' => [
+            'prop' => 'itemLevel',
+            'name' => $globalStrings['ITEM_LEVEL_ABBR'],
+        ],
         'class' => CLASS_PROFESSION,
-        'subClass' => $subcategory['subClass'],
-        'invTypes' => [INV_TYPE_PROFESSION_TOOL],
+        'subcategories' => $getSubclassCategories(CLASS_PROFESSION),
     ];
-    $subcategory['subcategories'][] = [
-        'name' => $globalStrings['AUCTION_SUBCATEGORY_PROFESSION_ACCESSORIES'],
-        'class' => CLASS_PROFESSION,
-        'subClass' => $subcategory['subClass'],
-        'invTypes' => [INV_TYPE_PROFESSION_GEAR],
+    $profEquipCategory['subcategories'] = array_values(array_filter($profEquipCategory['subcategories'], function ($subCat) {
+        return $subCat['subClass'] !== SUBCLASS_PROFESSION_ARCHAEOLOGY;
+    }));
+    foreach ($profEquipCategory['subcategories'] as &$subcategory) {
+        $subcategory['subcategories'][] = [
+            'name' => $globalStrings['AUCTION_SUBCATEGORY_PROFESSION_TOOLS'],
+            'class' => CLASS_PROFESSION,
+            'subClass' => $subcategory['subClass'],
+            'invTypes' => [INV_TYPE_PROFESSION_TOOL],
+        ];
+        $subcategory['subcategories'][] = [
+            'name' => $globalStrings['AUCTION_SUBCATEGORY_PROFESSION_ACCESSORIES'],
+            'class' => CLASS_PROFESSION,
+            'subClass' => $subcategory['subClass'],
+            'invTypes' => [INV_TYPE_PROFESSION_GEAR],
+        ];
+    }
+    unset($subcategory);
+    $result[] = $profEquipCategory;
+
+    // Housing
+    $result[] = [
+        'name' => $globalStrings['AUCTION_CATEGORY_HOUSING'],
+        'class' => CLASS_HOUSING,
+        'subcategories' => [
+            $makeSubclassCategory(CLASS_HOUSING, SUBCLASS_HOUSING_DECOR),
+            $makeSubclassCategory(CLASS_HOUSING, SUBCLASS_HOUSING_DYE),
+        ],
     ];
-}
-unset($subcategory);
-$result[] = $profEquipCategory;
 
-// Housing
-$result[] = [
-    'name' => $globalStrings['AUCTION_CATEGORY_HOUSING'],
-    'class' => CLASS_HOUSING,
-    'subcategories' => [
-        $makeSubclassCategory(CLASS_HOUSING, SUBCLASS_HOUSING_DECOR),
-        $makeSubclassCategory(CLASS_HOUSING, SUBCLASS_HOUSING_DYE),
-    ],
-];
-
-// Battle Pets
-$battlePetCategory = [
-    'name' => $globalStrings['AUCTION_CATEGORY_BATTLE_PETS'],
-    'class' => CLASS_BATTLE_PET,
-    'subcategories' => [],
-];
-for ($type = 1; $type <= 10; $type++) {
-    $battlePetCategory['subcategories'][] = [
-        'name' => $globalStrings["BATTLE_PET_NAME_{$type}"],
+    // Battle Pets
+    $battlePetCategory = [
+        'name' => $globalStrings['AUCTION_CATEGORY_BATTLE_PETS'],
         'class' => CLASS_BATTLE_PET,
-        'subClass' => $type,
+        'subcategories' => [],
     ];
+    for ($type = 1; $type <= 10; $type++) {
+        $battlePetCategory['subcategories'][] = [
+            'name' => $globalStrings["BATTLE_PET_NAME_{$type}"],
+            'class' => CLASS_BATTLE_PET,
+            'subClass' => $type,
+        ];
+    }
+    $companionSubcategory = $makeSubclassCategory(CLASS_MISCELLANEOUS, SUBCLASS_MISCELLANEOUS_COMPANION_PET);
+    $companionSubcategory['class'] = CLASS_BATTLE_PET;
+    $companionSubcategory['subClass'] = 0;
+    $battlePetCategory['subcategories'][] = $companionSubcategory;
+    $result[] = $battlePetCategory;
 }
-$companionSubcategory = $makeSubclassCategory(CLASS_MISCELLANEOUS, SUBCLASS_MISCELLANEOUS_COMPANION_PET);
-$companionSubcategory['class'] = CLASS_BATTLE_PET;
-$companionSubcategory['subClass'] = 0;
-$battlePetCategory['subcategories'][] = $companionSubcategory;
-$result[] = $battlePetCategory;
 
 // Quest Items
 $result[] = [
@@ -460,7 +595,7 @@ $result[] = [
 $result[] = [
     'name' => $globalStrings['AUCTION_CATEGORY_MISCELLANEOUS'],
     'class' => CLASS_MISCELLANEOUS,
-    'subcategories' => [
+    'subcategories' => isForever() ? $getSubclassCategories(CLASS_MISCELLANEOUS) : [
         $makeSubclassCategory(CLASS_MISCELLANEOUS, SUBCLASS_MISCELLANEOUS_JUNK),
         $makeSubclassCategory(CLASS_MISCELLANEOUS, SUBCLASS_MISCELLANEOUS_REAGENT),
         $makeSubclassCategory(CLASS_MISCELLANEOUS, SUBCLASS_MISCELLANEOUS_HOLIDAY),
@@ -470,10 +605,12 @@ $result[] = [
     ],
 ];
 
-$result[] = [
-    'name' => $globalStrings['TOKEN_FILTER_LABEL'],
-    'class' => CLASS_WOW_TOKEN,
-];
+if (!isForever()) {
+    $result[] = [
+        'name'  => $globalStrings['TOKEN_FILTER_LABEL'],
+        'class' => CLASS_WOW_TOKEN,
+    ];
+}
 
 foreach ($result as &$cat) {
     if (count($cat['subcategories'] ?? []) < 2) {

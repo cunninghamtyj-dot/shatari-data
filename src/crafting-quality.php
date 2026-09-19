@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/incl.php';
 
-$outPath = __DIR__ . '/../out';
+$outPath = getOutPath();
 
 echo "Opening CraftingQualityAtlasSet reader...\n";
 $atlasSetReader = getReader('CraftingQualityAtlasSet');

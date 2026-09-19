@@ -2,9 +2,7 @@
 
 require_once __DIR__ . '/incl.php';
 
-$outPath = __DIR__ . '/../out';
-
-define('DEFAULT_EXPANSION', 12);
+$outPath = getOutPath();
 
 define('FLAG_UNTRADEABLE',   0x010);
 define('FLAG_UNTAMEABLE',    0x020);
@@ -30,16 +28,17 @@ $getIcon = function (int $id) use ($fileListReader): string {
 
     $rec = $fileListReader->getRecord($id);
 
-    return $cache[$id] = preg_replace('/\.blp$/', '', strtolower(str_replace(' ', '-', $rec['FileName'] ?? '')));
+    return $cache[$id] = preg_replace('/\.blp$/', '', strtolower(str_replace(' ', '-', $rec['FileName'] ?? (string)$id)));
 };
 
-$petExpansions = json_decode(file_get_contents(__DIR__ . '/../expansion-pets.json'), true);
+$petExpansions = isForever() ? [] : json_decode(file_get_contents(__DIR__ . '/../expansion-pets.json'), true);
 
 echo "Reading species...\n";
 
 $pets = [];
 $names = [];
 $badFlags = FLAG_UNTRADEABLE | FLAG_UNTAMEABLE;
+$defaultExpansion = getDefaultExpansion();
 foreach ($speciesReader->generateRecords() as $id => $rec) {
     if ($rec['Flags'] & $badFlags) {
         continue;
@@ -56,7 +55,7 @@ foreach ($speciesReader->generateRecords() as $id => $rec) {
         'icon' => $getIcon($rec['IconFileDataID']),
         'type' => $rec['PetTypeEnum'] + 1,
         'display' => $npc['DisplayID'][0],
-        'expansion' => $petExpansions[$id] ?? DEFAULT_EXPANSION,
+        'expansion' => $petExpansions[$id] ?? $defaultExpansion,
         'power' => 8,
         'stamina' => 8,
         'speed' => 8,
@@ -76,7 +75,10 @@ unset($creatureReader, $fileListReader, $speciesReader);
 
 echo "Opening Species State reader...\n";
 $speciesStateReader = getReader('BattlePetSpeciesState');
-$speciesStateReader->fetchColumnNames();
+// Forever has a blank file with fewer columns than its layout hash indicates.
+if ($speciesStateReader->getIds()) {
+    $speciesStateReader->fetchColumnNames();
+}
 
 foreach ($speciesStateReader->generateRecords() as $rec) {
     if (!isset($pets[$rec['BattlePetSpeciesID']])) {

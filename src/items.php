@@ -2,13 +2,11 @@
 
 require_once __DIR__ . '/incl.php';
 
-$outPath = __DIR__ . '/../out';
+$outPath = getOutPath();
 
 define('BOND_WHEN_PICKED_UP', 1);
 define('BOND_QUEST', 4);
 define('BOND_QUEST_2', 5);
-
-define('DEFAULT_EXPANSION', 12);
 
 define('FLAGS_0_CONJURED', 0x2);
 define('FLAGS_1_HORDE', 0x1);
@@ -90,8 +88,9 @@ foreach ($itemModifiedAppearanceReader->generateRecords() as $rec) {
 unset($itemModifiedAppearanceReader, $appearanceToIcon, $appearanceToDisplay);
 echo sprintf("Found %d icon associations, %d displays for items.\n", count($itemIcons), count($itemDisplays));
 
-$itemExpansions = json_decode(file_get_contents(__DIR__ . '/../expansion-items.json'), true);
-$vendorItems = json_decode(file_get_contents(__DIR__ . '/../vendor-items.json'), true);
+$itemExpansions = isForever() ? [] : json_decode(file_get_contents(__DIR__ . '/../expansion-items.json'), true);
+$vendorFile = isForever() ? 'vendor-items.forever.json' : 'vendor-items.json';
+$vendorItems = json_decode(file_get_contents(__DIR__ . "/../{$vendorFile}"), true);
 
 $squishEras = getSquishEras();
 $squishItemLevel = static function (int $level, int $fromEra) use ($squishEras): ?int {
@@ -144,6 +143,7 @@ $getIcon = function (int $id) use ($fileListReader): string {
     return $cache[$id] = preg_replace('/\.blp$/', '', strtolower(str_replace(' ', '-', $rec['FileName'] ?? $id)));
 };
 
+$defaultExpansion = getDefaultExpansion();
 $itemCount = count($itemReader->getIds());
 echo "Starting on {$itemCount} items.\n";
 $processed = 0;
@@ -190,7 +190,7 @@ foreach ($itemReader->generateRecords() as $id => $itemRec) {
         'quality' => $sparseRec['OverallQualityID'],
         //'vendorBuy' => $sparseRec['BuyPrice'],
         'vendorSell' => $sparseRec['SellPrice'],
-        'expansion' => $itemExpansions[$id] ?? DEFAULT_EXPANSION,
+        'expansion' => $itemExpansions[$id] ?? $defaultExpansion,
     ];
     if ($bop) {
         $items[$id]['bop'] = true;

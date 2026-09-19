@@ -50,9 +50,11 @@ define('CLASS_CONTAINER', 1);
 define('CLASS_WEAPON', 2);
 define('CLASS_GEM', 3);
 define('CLASS_ARMOR', 4);
+define('CLASS_PROJECTILE', 6);
 define('CLASS_TRADEGOODS', 7);
 define('CLASS_ITEM_ENHANCEMENT', 8);
 define('CLASS_RECIPE', 9);
+define('CLASS_QUIVER', 11);
 define('CLASS_QUESTITEM', 12);
 define('CLASS_MISCELLANEOUS', 15);
 define('CLASS_GLYPH', 16);
@@ -68,11 +70,36 @@ define('SUBCLASS_ARMOR_MAIL', 3);
 define('SUBCLASS_ARMOR_PLATE', 4);
 define('SUBCLASS_ARMOR_COSMETIC', 5);
 define('SUBCLASS_ARMOR_SHIELD', 6);
+define('SUBCLASS_ARMOR_LIBRAM', 7);
+define('SUBCLASS_ARMOR_IDOL', 8);
+define('SUBCLASS_ARMOR_TOTEM', 9);
+define('SUBCLASS_ARMOR_SIGIL', 10);
+define('SUBCLASS_ARMOR_RELIC', 11);
 
 define('STAT_SPEED_RATING', 61);
 define('STAT_LEECH_RATING', 62);
 define('STAT_AVOIDANCE_RATING', 63);
 define('STAT_INDESTRUCTIBLE_RATING', 64);
+
+function isForever() {
+    static $cached = null;
+    $cached ??= strtolower(getenv('SHATARI_PRODUCT') ?: '') === 'forever';
+
+    return $cached;
+}
+
+function getDefaultExpansion() {
+    return isForever() ? 1 : 12;
+}
+
+function getOutPath() {
+    $outPath = __DIR__ . '/../out/' . (isForever() ? 'forever' : 'mainline');
+    if (!is_dir($outPath) && !mkdir($outPath, recursive: true) && !is_dir($outPath)) {
+        throw new \RuntimeException(sprintf('Directory "%s" was not created', $outPath));
+    }
+
+    return $outPath;
+}
 
 /**
  * @param string $db2Name
@@ -82,7 +109,8 @@ define('STAT_INDESTRUCTIBLE_RATING', 64);
  */
 function getReader(string $db2Name, string $locale = 'enus') {
     $locale = strtolower(substr($locale, 0, 2)) . strtoupper(substr($locale, 2, 2));
-    $db2Path = __DIR__ . "/../current/{$locale}/DBFilesClient";
+    $current = 'current' . (isForever() ? '.forever' : '');
+    $db2Path = __DIR__ . "/../{$current}/{$locale}/DBFilesClient";
 
     $hotfixPath = "{$db2Path}/DBCache.bin";
     $hotfixPath = file_exists($hotfixPath) ? $hotfixPath : null;

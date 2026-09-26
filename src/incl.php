@@ -5,6 +5,8 @@ require_once __DIR__ . '/../vendor/autoload.php';
 use Erorus\DB2\Reader;
 use Erorus\DB2\HotfixedReader;
 
+Reader::setDbDefsDirectory(getenv('DBDEFS_DIR') ?: null);
+
 define('SQUISH_PATCH', 120000);
 
 define('LOCALES', ['enus', 'dede', 'eses', 'frfr', 'itit', 'kokr', 'ptbr', 'ruru', 'zhtw', 'esmx']);

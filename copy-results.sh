@@ -119,8 +119,8 @@ cd "$( dirname "${BASH_SOURCE[0]}" )"
 
 cd out/mainline
 safe_copy battlepets.json bonuses.json items.all.json names.bound.*.json ../../../shatari/game/mainline
-safe_copy --compress craftingQualities.json battlepets.json battlepets.*.json categories.*.json items.unbound.json names.unbound.*.json name-suffixes.*.json vendor.json bonusToStats.json bonusToSockets.json ../../../shatari-front/json/mainline
+safe_copy --compress craftingQualities.json battlepets.json battlepets.*.json categories.*.json items.unbound.json names.unbound.*.json name-suffixes.*.json globalStrings.*.json vendor.json bonusToStats.json bonusToSockets.json ../../../shatari-front/json/mainline
 
 cd ../forever
 safe_copy battlepets.json bonuses.json items.all.json names.bound.*.json ../../../shatari/game/forever
-safe_copy --compress craftingQualities.json battlepets.json battlepets.*.json categories.*.json items.unbound.json names.unbound.*.json name-suffixes.*.json vendor.json bonusToStats.json bonusToSockets.json ../../../shatari-front/json/forever
+safe_copy --compress craftingQualities.json battlepets.json battlepets.*.json categories.*.json items.unbound.json names.unbound.*.json name-suffixes.*.json globalStrings.*.json vendor.json bonusToStats.json bonusToSockets.json ../../../shatari-front/json/forever

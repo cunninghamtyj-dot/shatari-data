@@ -16,6 +16,8 @@ echo Categories
 ./categories.sh
 echo Crafting Quality
 php crafting-quality.php
+echo Global Strings
+php globalstrings.php
 echo Items
 php items.php
 

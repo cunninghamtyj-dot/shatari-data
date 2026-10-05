@@ -2,6 +2,19 @@
 
 set -euo pipefail
 
+# Portable helpers: GNU coreutils (Linux) or BSD (macOS).
+file_size() {
+    stat -c%s -- "$1" 2>/dev/null || stat -f%z -- "$1"
+}
+
+file_md5() {
+    if command -v md5sum >/dev/null; then
+        md5sum -- "$1" | awk '{print $1}'
+    else
+        md5 -q -- "$1"
+    fi
+}
+
 # safe_copy [--compress] SRC [SRC ...] DEST_DIR
 #
 # For each SRC file, copies it into DEST_DIR unless:
@@ -68,8 +81,8 @@ safe_copy() {
 
         if [[ -f "$dest" ]]; then
             local src_size dest_size
-            src_size=$(stat -c%s -- "$src")
-            dest_size=$(stat -c%s -- "$dest")
+            src_size=$(file_size "$src")
+            dest_size=$(file_size "$dest")
 
             # Skip if new file size <= 90% of original size.
             # i.e. src_size * 10 <= dest_size * 9  (integer-safe form of src <= 0.9*dest)
@@ -79,8 +92,8 @@ safe_copy() {
             fi
 
             local src_md5 dest_md5
-            src_md5=$(md5sum -- "$src" | awk '{print $1}')
-            dest_md5=$(md5sum -- "$dest" | awk '{print $1}')
+            src_md5=$(file_md5 "$src")
+            dest_md5=$(file_md5 "$dest")
 
             if [[ "$src_md5" == "$dest_md5" ]]; then
                 echo "safe_copy: SKIP '$base' (md5 unchanged)"
@@ -92,7 +105,7 @@ safe_copy() {
         local tmp
         tmp=$(mktemp "$dest_dir/.${base}.XXXXXX")
         cp -- "$src" "$tmp"
-        chmod 0664 -- "$tmp"
+        chmod 0664 "$tmp"
         mv -- "$tmp" "$dest"
         echo "safe_copy: copied '$base'"
 
@@ -100,13 +113,13 @@ safe_copy() {
             local gz_tmp br_tmp
             gz_tmp=$(mktemp "$dest_dir/.${base}.gz.XXXXXX")
             gzip --best -c -- "$dest" > "$gz_tmp"
-            chmod 0664 -- "$gz_tmp"
+            chmod 0664 "$gz_tmp"
             touch -r "$dest" "$gz_tmp"
             mv -f -- "$gz_tmp" "${dest}.gz"
 
             br_tmp=$(mktemp "$dest_dir/.${base}.br.XXXXXX")
             brotli -f -o "$br_tmp" -- "$dest"
-            chmod 0664 -- "$br_tmp"
+            chmod 0664 "$br_tmp"
             touch -r "$dest" "$br_tmp"
             mv -f -- "$br_tmp" "${dest}.br"
 
@@ -117,10 +130,17 @@ safe_copy() {
 
 cd "$( dirname "${BASH_SOURCE[0]}" )"
 
+mkdir -p ../shatari/game/mainline ../shatari-front/json/mainline
 cd out/mainline
 safe_copy battlepets.json bonuses.json items.all.json names.bound.*.json ../../../shatari/game/mainline
 safe_copy --compress craftingQualities.json battlepets.json battlepets.*.json categories.*.json items.unbound.json names.unbound.*.json name-suffixes.*.json globalStrings.*.json vendor.json bonusToStats.json bonusToSockets.json ../../../shatari-front/json/mainline
 
+if [[ ! -d ../forever ]]; then
+    echo ""
+    echo "No out/forever data; skipping Forever copy."
+    exit 0
+fi
+mkdir -p ../../../shatari/game/forever ../../../shatari-front/json/forever
 cd ../forever
 safe_copy battlepets.json bonuses.json items.all.json names.bound.*.json ../../../shatari/game/forever
 safe_copy --compress craftingQualities.json battlepets.json battlepets.*.json categories.*.json items.unbound.json names.unbound.*.json name-suffixes.*.json globalStrings.*.json vendor.json bonusToStats.json bonusToSockets.json ../../../shatari-front/json/forever

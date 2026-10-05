@@ -1,0 +1,8 @@
+{
+  "name": "azeroth-exchange-data",
+  "private": true,
+  "description": "Downloads WoW DB2 files for the shatari-data scripts",
+  "dependencies": {
+    "@rhyster/wow-casc-dbc": "^2.16.14"
+  }
+}

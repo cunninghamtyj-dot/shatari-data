@@ -1,3 +1,13 @@
+# Azeroth Exchange - Game Data
+
+This is the game data tool for **Azeroth Exchange**, a modified version of [Project Shatari - Data](https://github.com/erorus/shatari-data) by Gerard Dombroski, used under the Apache License 2.0. Azeroth Exchange is not affiliated with or endorsed by the original project.
+
+**Changes from upstream** include: `fetch-db2.mjs` to download DB2 tables from Blizzard's CDN, and a macOS-compatible `copy-results.sh`.
+
+The original README follows.
+
+---
+
 # Project Shatari - Data
 
 This is the static game data processing code for [Undermine Exchange](https://undermine.exchange), which provides historical auction pricing data for World of Warcraft.
